@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Calendar, List, Users } from 'lucide-react'
+import { Calendar, LayoutDashboard, List, Users } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Tổng quan', icon: LayoutDashboard },
@@ -15,28 +15,35 @@ export function NavBar() {
   const pathname = usePathname()
 
   return (
-    <nav className="border-b border-gray-100 bg-white sticky top-0 z-10">
-      <div className="max-w-6xl mx-auto px-6 flex items-center gap-1 h-12">
-        <span className="text-sm font-medium text-gray-900 mr-4">Đồi Llum</span>
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition ${
-                isActive
-                  ? 'bg-gray-100 text-gray-900 font-medium'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <Icon size={14} />
-              {item.label}
-            </Link>
-          )
-        })}
+    <nav className="sticky top-0 z-10 border-b border-[#dadce0] bg-white">
+      <div className="app-container flex h-14 items-center gap-6">
+        <Link href="/" className="text-[15px] font-medium text-[#202124]">
+          Đồi Llum Admin
+        </Link>
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          {NAV_ITEMS.map((item) => {
+            const isActive =
+              item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`relative flex h-14 items-center gap-2 px-3 text-sm transition-colors ${
+                  isActive
+                    ? 'text-[#1a73e8]'
+                    : 'text-[#5f6368] hover:text-[#202124]'
+                }`}
+              >
+                <Icon size={16} strokeWidth={1.8} />
+                <span className="whitespace-nowrap">{item.label}</span>
+                {isActive && (
+                  <span className="absolute inset-x-3 bottom-0 h-0.5 bg-[#1a73e8]" />
+                )}
+              </Link>
+            )
+          })}
+        </div>
       </div>
     </nav>
   )

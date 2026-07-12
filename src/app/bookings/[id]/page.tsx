@@ -1,9 +1,9 @@
+import { BookingActions } from '@/components/BookingActions'
+import { StatusBadge } from '@/components/StatusBadge'
 import { createServiceClient } from '@/lib/supabase-server'
 import type { BookingWithResource } from '@/types/database'
-import { StatusBadge } from '@/components/StatusBadge'
-import { BookingActions } from '@/components/BookingActions'
-import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
@@ -31,53 +31,47 @@ export default async function BookingDetailPage({
   if (!booking) notFound()
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <Link
-        href="/bookings"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4"
-      >
-        <ArrowLeft size={14} /> Quay lại danh sách
+    <div className="app-container max-w-[860px] py-6">
+      <Link href="/bookings" className="mb-4 inline-flex items-center gap-1.5 text-sm text-[#5f6368] hover:text-[#202124]">
+        <ArrowLeft size={16} /> Quay lại danh sách
       </Link>
 
-      <div className="border border-gray-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-medium text-gray-900">{booking.booking_code}</h1>
+      <article className="surface bg-white">
+        <header className="flex flex-col gap-3 border-b border-[#dadce0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="page-title">{booking.booking_code}</h1>
+            <p className="page-description mt-1">{booking.resource.name} · {booking.customer_name}</p>
+          </div>
           <StatusBadge status={booking.status} />
-        </div>
+        </header>
 
-        <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm mb-4">
-          <Field label="Phòng" value={booking.resource.name} />
-          <Field
-            label="Ngày"
-            value={`${formatDate(booking.check_in)} - ${formatDate(booking.check_out)}`}
-          />
-          <Field label="Khách" value={booking.customer_name} />
-          <Field label="SĐT" value={booking.customer_phone} />
-          <Field
-            label="Số khách"
-            value={`${booking.adult_count} người lớn${
-              booking.child_count > 0 ? `, ${booking.child_count} trẻ em` : ''
-            }${booking.pet_count > 0 ? `, ${booking.pet_count} thú cưng` : ''}`}
-          />
-          <Field label="Kênh liên hệ" value={booking.customer_platform ?? '-'} />
-        </dl>
+        <section className="px-5 py-5">
+          <h2 className="mb-3 text-sm font-medium text-[#202124]">Thông tin lưu trú</h2>
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+            <Field label="Phòng" value={booking.resource.name} />
+            <Field label="Ngày" value={`${formatDate(booking.check_in)} - ${formatDate(booking.check_out)}`} />
+            <Field label="Khách" value={booking.customer_name} />
+            <Field label="SĐT" value={booking.customer_phone} />
+            <Field
+              label="Số khách"
+              value={`${booking.adult_count} người lớn${
+                booking.child_count > 0 ? `, ${booking.child_count} trẻ em` : ''
+              }${booking.pet_count > 0 ? `, ${booking.pet_count} thú cưng` : ''}`}
+            />
+            <Field label="Kênh liên hệ" value={booking.customer_platform ?? '-'} />
+          </dl>
+        </section>
 
-        <div className="border-t border-gray-100 pt-4">
-          <h2 className="text-xs font-medium text-gray-500 mb-2">THÔNG TIN THANH TOÁN</h2>
-          <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+        <section className="border-t border-[#e8eaed] px-5 py-5">
+          <h2 className="mb-3 text-sm font-medium text-[#202124]">Thanh toán</h2>
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             <Field label="Tổng tiền" value={formatVND(booking.total_amount)} />
             <Field label="% cọc áp dụng" value={`${booking.deposit_percent}%`} />
             <Field label="Cần thu" value={formatVND(booking.amount_due)} strong />
             <Field
               label="Đã nhận"
               value={booking.amount_paid != null ? formatVND(booking.amount_paid) : 'Chưa có'}
-              tone={
-                booking.status === 'payment_mismatch'
-                  ? 'danger'
-                  : booking.amount_paid
-                  ? 'success'
-                  : undefined
-              }
+              tone={booking.status === 'payment_mismatch' ? 'danger' : booking.amount_paid ? 'success' : undefined}
             />
             {booking.refund_amount != null && (
               <>
@@ -88,57 +82,37 @@ export default async function BookingDetailPage({
           </dl>
 
           {booking.payment_screenshot_url && (
-            <div className="mt-3">
-              <h3 className="text-xs font-medium text-gray-500 mb-2">
-                ẢNH CHUYỂN KHOẢN KHÁCH GỬI
-              </h3>
-              <a
-                href={booking.payment_screenshot_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
-              >
+            <div className="mt-5">
+              <h3 className="mb-2 text-xs font-medium uppercase tracking-[0.04em] text-[#5f6368]">Ảnh chuyển khoản</h3>
+              <a href={booking.payment_screenshot_url} target="_blank" rel="noopener noreferrer" className="inline-block">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={booking.payment_screenshot_url}
-                  alt="Ảnh chuyển khoản"
-                  className="rounded-lg border border-gray-200 max-h-80 object-contain"
-                />
+                <img src={booking.payment_screenshot_url} alt="Ảnh chuyển khoản" className="max-h-80 border border-[#dadce0] object-contain" />
               </a>
             </div>
           )}
-        </div>
+        </section>
 
         {booking.cancel_reason && (
-          <div className="border-t border-gray-100 pt-4 mt-4">
-            <h2 className="text-xs font-medium text-gray-500 mb-1">LÝ DO HUỶ</h2>
-            <p className="text-sm text-gray-700">{booking.cancel_reason}</p>
-          </div>
+          <section className="border-t border-[#e8eaed] px-5 py-5">
+            <h2 className="mb-1 text-sm font-medium text-[#202124]">Lý do huỷ</h2>
+            <p className="text-sm text-[#5f6368]">{booking.cancel_reason}</p>
+          </section>
         )}
 
-        <BookingActions booking={booking} />
-      </div>
+        <div className="px-5 pb-5">
+          <BookingActions booking={booking} />
+        </div>
+      </article>
     </div>
   )
 }
 
-function Field({
-  label,
-  value,
-  strong,
-  tone,
-}: {
-  label: string
-  value: string
-  strong?: boolean
-  tone?: 'danger' | 'success'
-}) {
-  const toneClass =
-    tone === 'danger' ? 'text-red-600' : tone === 'success' ? 'text-green-600' : 'text-gray-900'
+function Field({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: 'danger' | 'success' }) {
+  const toneClass = tone === 'danger' ? 'text-[#c5221f]' : tone === 'success' ? 'text-[#137333]' : 'text-[#202124]'
   return (
     <div>
-      <dt className="text-xs text-gray-500">{label}</dt>
-      <dd className={`${strong ? 'font-medium' : ''} ${toneClass}`}>{value}</dd>
+      <dt className="text-xs font-medium uppercase tracking-[0.04em] text-[#5f6368]">{label}</dt>
+      <dd className={`mt-1 text-sm ${strong ? 'font-medium' : ''} ${toneClass}`}>{value}</dd>
     </div>
   )
 }

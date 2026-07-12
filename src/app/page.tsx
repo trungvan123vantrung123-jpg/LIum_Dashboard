@@ -1,9 +1,9 @@
-import { createServiceClient } from '@/lib/supabase-server'
-import type { BookingWithResource } from '@/types/database'
 import { AlertCard } from '@/components/AlertCard'
 import { StatCard } from '@/components/StatCard'
-import Link from 'next/link'
+import { createServiceClient } from '@/lib/supabase-server'
+import type { BookingWithResource } from '@/types/database'
 import { Calendar, List, Users } from 'lucide-react'
+import Link from 'next/link'
 
 // Trang này luôn lấy dữ liệu mới nhất từ Supabase, không dùng cache tĩnh —
 // vì đây là dashboard vận hành, nhân viên cần thấy số liệu thật lúc họ mở trang.
@@ -13,7 +13,6 @@ async function getDashboardData() {
   const supabase = createServiceClient()
   const today = new Date().toISOString().split('T')[0]
 
-  // Số phòng đang có khách hôm nay: check_in <= hôm nay < check_out, status confirmed
   const { data: stayingToday } = await supabase
     .from('bookings')
     .select('id')
@@ -28,13 +27,11 @@ async function getDashboardData() {
     .eq('resource_type', 'room')
     .eq('is_active', true)
 
-  // Booking đang chờ xác nhận (pending_hold)
   const { data: pendingBookings } = await supabase
     .from('bookings')
     .select('id')
     .eq('status', 'pending_hold')
 
-  // Lead sự kiện mới trong 48h gần nhất
   const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
   const { data: newLeads } = await supabase
     .from('event_inquiries')
@@ -42,7 +39,6 @@ async function getDashboardData() {
     .eq('status', 'new_lead')
     .gte('created_at', twoDaysAgo)
 
-  // Các case cần xử lý gấp: lệch tiền, chờ duyệt huỷ, sắp hết hạn giữ chỗ (<30 phút)
   const { data: mismatchBookings } = await supabase
     .from('bookings')
     .select('*, resource:resources(*)')
@@ -92,19 +88,17 @@ export default async function DashboardPage() {
     data.expiringBookings.length
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-lg font-medium text-gray-900">
-          Đồi Llum — Bảng điều khiển
-        </h1>
-        <span className="text-sm text-gray-500 capitalize">{todayLabel}</span>
-      </div>
+    <div className="app-container py-6">
+      <header className="mb-6 flex flex-col gap-1 border-b border-[#dadce0] pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="page-title">Tổng quan vận hành</h1>
+          <p className="page-description mt-1">Đồi Llum — cập nhật theo thời gian thực từ Supabase.</p>
+        </div>
+        <span className="text-sm capitalize text-[#5f6368]">{todayLabel}</span>
+      </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        <StatCard
-          label="Khách đang lưu trú"
-          value={`${data.stayingCount} / ${data.totalRooms} phòng`}
-        />
+      <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Khách lưu trú" value={`${data.stayingCount} / ${data.totalRooms}`} />
         <StatCard
           label="Chờ xác nhận cọc"
           value={data.pendingCount}
@@ -116,78 +110,75 @@ export default async function DashboardPage() {
           value={totalUrgent}
           tone={totalUrgent > 0 ? 'danger' : 'default'}
         />
-      </div>
+      </section>
 
-      <div className="mb-8">
-        <h2 className="text-sm font-medium text-gray-900 mb-3">Cần xử lý ngay</h2>
+      <section className="surface mb-6 overflow-hidden">
+        <div className="border-b border-[#dadce0] px-4 py-3">
+          <h2 className="text-sm font-medium text-[#202124]">Cần xử lý ngay</h2>
+          <p className="mt-0.5 text-xs text-[#5f6368]">Các booking cần nhân viên kiểm tra thủ công.</p>
+        </div>
 
-        {totalUrgent === 0 && (
-          <p className="text-sm text-gray-500">
+        {totalUrgent === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-[#5f6368]">
             Không có việc gấp nào cần xử lý lúc này.
-          </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#e8eaed]">
+            {data.mismatchBookings.map((b) => (
+              <AlertCard
+                key={b.id}
+                tone="danger"
+                title={`${b.booking_code} — lệch tiền`}
+                description={`Cần ${formatVND(b.amount_due)}, nhận ${formatVND(
+                  b.amount_paid ?? 0
+                )} — ${b.resource.name}`}
+                href={`/bookings/${b.id}`}
+              />
+            ))}
+            {data.cancelRequestedBookings.map((b) => (
+              <AlertCard
+                key={b.id}
+                tone="warning"
+                title={`${b.booking_code} — chờ duyệt huỷ`}
+                description={`${b.resource.name}, khách ${b.customer_name}, đã thanh toán ${formatVND(
+                  b.amount_paid ?? 0
+                )}`}
+                href={`/bookings/${b.id}`}
+              />
+            ))}
+            {data.expiringBookings.map((b) => (
+              <AlertCard
+                key={b.id}
+                tone="muted"
+                title={`${b.booking_code} — sắp hết hạn giữ chỗ`}
+                description={`${b.resource.name}, còn ${minutesUntil(
+                  b.hold_expires_at
+                )} phút, chưa thấy chuyển khoản`}
+                href={`/bookings/${b.id}`}
+              />
+            ))}
+          </div>
         )}
+      </section>
 
-        <div className="flex flex-col gap-2">
-          {data.mismatchBookings.map((b) => (
-            <AlertCard
-              key={b.id}
-              tone="danger"
-              title={`${b.booking_code} — lệch tiền`}
-              description={`Cần ${formatVND(b.amount_due)}, nhận ${formatVND(
-                b.amount_paid ?? 0
-              )} — ${b.resource.name}`}
-              href={`/bookings/${b.id}`}
-            />
-          ))}
-          {data.cancelRequestedBookings.map((b) => (
-            <AlertCard
-              key={b.id}
-              tone="warning"
-              title={`${b.booking_code} — chờ duyệt huỷ`}
-              description={`${b.resource.name}, khách ${b.customer_name}, đã thanh toán ${formatVND(
-                b.amount_paid ?? 0
-              )}`}
-              href={`/bookings/${b.id}`}
-            />
-          ))}
-          {data.expiringBookings.map((b) => (
-            <AlertCard
-              key={b.id}
-              tone="muted"
-              title={`${b.booking_code} — sắp hết hạn giữ chỗ`}
-              description={`${b.resource.name}, còn ${minutesUntil(
-                b.hold_expires_at
-              )} phút, chưa thấy chuyển khoản`}
-              href={`/bookings/${b.id}`}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="text-sm font-medium text-gray-900 mb-3">Truy cập nhanh</h2>
-        <div className="grid grid-cols-3 gap-3">
-          <Link
-            href="/calendar"
-            className="flex items-center justify-center gap-2 border border-gray-200 rounded-lg py-3 text-sm hover:bg-gray-50 transition"
-          >
-            <Calendar size={16} /> Lịch phòng
-          </Link>
-          <Link
-            href="/bookings"
-            className="flex items-center justify-center gap-2 border border-gray-200 rounded-lg py-3 text-sm hover:bg-gray-50 transition"
-          >
-            <List size={16} /> Danh sách booking
-          </Link>
-          <Link
-            href="/events"
-            className="flex items-center justify-center gap-2 border border-gray-200 rounded-lg py-3 text-sm hover:bg-gray-50 transition"
-          >
-            <Users size={16} /> Sự kiện
-          </Link>
-        </div>
-      </div>
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <QuickLink href="/calendar" icon={<Calendar size={18} />} title="Lịch phòng" text="Xem tình trạng phòng theo tháng" />
+        <QuickLink href="/bookings" icon={<List size={18} />} title="Danh sách booking" text="Tra cứu và xử lý đặt phòng" />
+        <QuickLink href="/events" icon={<Users size={18} />} title="Sự kiện" text="Theo dõi lead và báo giá" />
+      </section>
     </div>
+  )
+}
+
+function QuickLink({ href, icon, title, text }: { href: string; icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <Link href={href} className="surface flex items-start gap-3 bg-white p-4 transition-colors hover:bg-[#f8fafd]">
+      <span className="mt-0.5 text-[#1a73e8]">{icon}</span>
+      <span>
+        <span className="block text-sm font-medium text-[#202124]">{title}</span>
+        <span className="mt-0.5 block text-xs text-[#5f6368]">{text}</span>
+      </span>
+    </Link>
   )
 }
 

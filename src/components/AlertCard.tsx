@@ -1,23 +1,23 @@
 import Link from 'next/link'
-import { ChevronRight, AlertTriangle, Clock, Hourglass } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Clock, Hourglass } from 'lucide-react'
 
 type Tone = 'danger' | 'warning' | 'muted'
 
-const TONE_STYLES: Record<Tone, { bg: string; text: string; icon: React.ReactNode }> = {
+const TONE_STYLES: Record<Tone, { border: string; text: string; icon: React.ReactNode }> = {
   danger: {
-    bg: 'bg-red-50',
-    text: 'text-red-800',
-    icon: <AlertTriangle size={18} className="text-red-600" />,
+    border: 'border-l-[#c5221f]',
+    text: 'text-[#c5221f]',
+    icon: <AlertTriangle size={17} className="text-[#c5221f]" />,
   },
   warning: {
-    bg: 'bg-amber-50',
-    text: 'text-amber-800',
-    icon: <Clock size={18} className="text-amber-600" />,
+    border: 'border-l-[#f9ab00]',
+    text: 'text-[#b06000]',
+    icon: <Clock size={17} className="text-[#b06000]" />,
   },
   muted: {
-    bg: 'bg-gray-50',
-    text: 'text-gray-700',
-    icon: <Hourglass size={18} className="text-gray-500" />,
+    border: 'border-l-[#9aa0a6]',
+    text: 'text-[#3c4043]',
+    icon: <Hourglass size={17} className="text-[#5f6368]" />,
   },
 }
 
@@ -35,14 +35,14 @@ export function AlertCard({ tone, title, description, href }: AlertCardProps) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 ${style.bg} hover:opacity-90 transition`}
+      className={`flex items-center gap-3 border border-l-4 border-[#dadce0] bg-white px-3 py-3 transition-colors hover:bg-[#f8fafd] ${style.border}`}
     >
       {style.icon}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className={`text-sm font-medium ${style.text}`}>{title}</div>
-        <div className="text-xs text-gray-600 truncate">{description}</div>
+        <div className="truncate text-xs text-[#5f6368]">{description}</div>
       </div>
-      <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+      <ChevronRight size={16} className="flex-shrink-0 text-[#9aa0a6]" />
     </Link>
   )
 }

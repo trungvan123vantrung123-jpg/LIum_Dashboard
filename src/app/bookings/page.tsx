@@ -1,8 +1,7 @@
-import { createServiceClient } from '@/lib/supabase-server'
-import type { BookingWithResource, BookingStatus } from '@/types/database'
 import { StatusBadge } from '@/components/StatusBadge'
+import { createServiceClient } from '@/lib/supabase-server'
+import { BOOKING_STATUS_LABEL, type BookingStatus, type BookingWithResource } from '@/types/database'
 import Link from 'next/link'
-import { BOOKING_STATUS_LABEL } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,18 +47,21 @@ export default async function BookingsPage({
   const bookings = await getBookings(currentFilter)
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-lg font-medium text-gray-900 mb-4">Danh sách booking</h1>
+    <div className="app-container py-6">
+      <header className="mb-5 border-b border-[#dadce0] pb-5">
+        <h1 className="page-title">Danh sách booking</h1>
+        <p className="page-description mt-1">100 booking lưu trú mới nhất, lọc theo trạng thái xử lý.</p>
+      </header>
 
-      <div className="flex flex-wrap gap-2 mb-5">
+      <div className="mb-4 flex flex-wrap gap-1 border-b border-[#dadce0]">
         {FILTER_OPTIONS.map((opt) => (
           <Link
             key={opt.value}
             href={opt.value === 'all' ? '/bookings' : `/bookings?status=${opt.value}`}
-            className={`text-xs px-3 py-1.5 rounded-full border transition ${
+            className={`border-b-2 px-3 py-2 text-sm transition-colors ${
               currentFilter === opt.value
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                ? 'border-[#1a73e8] text-[#1a73e8]'
+                : 'border-transparent text-[#5f6368] hover:text-[#202124]'
             }`}
           >
             {opt.label}
@@ -68,42 +70,35 @@ export default async function BookingsPage({
       </div>
 
       {bookings.length === 0 ? (
-        <p className="text-sm text-gray-500">Không có booking nào phù hợp bộ lọc.</p>
+        <div className="surface bg-white px-4 py-10 text-center text-sm text-[#5f6368]">
+          Không có booking nào phù hợp bộ lọc.
+        </div>
       ) : (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
-            <thead className="bg-gray-50 text-left text-xs text-gray-500">
+        <div className="surface table-scroll bg-white">
+          <table className="w-full min-w-[860px] text-sm" style={{ tableLayout: 'fixed' }}>
+            <thead className="border-b border-[#dadce0] bg-[#f8fafd] text-left text-xs text-[#5f6368]">
               <tr>
-                <th className="px-3 py-2 font-medium" style={{ width: '14%' }}>Mã booking</th>
-                <th className="px-3 py-2 font-medium" style={{ width: '18%' }}>Phòng</th>
-                <th className="px-3 py-2 font-medium" style={{ width: '18%' }}>Ngày</th>
-                <th className="px-3 py-2 font-medium" style={{ width: '16%' }}>Khách</th>
-                <th className="px-3 py-2 font-medium" style={{ width: '16%' }}>Trạng thái</th>
-                <th className="px-3 py-2 font-medium text-right" style={{ width: '18%' }}>Số tiền</th>
+                <th className="px-4 py-3 font-medium" style={{ width: '14%' }}>Mã booking</th>
+                <th className="px-4 py-3 font-medium" style={{ width: '18%' }}>Phòng</th>
+                <th className="px-4 py-3 font-medium" style={{ width: '18%' }}>Ngày</th>
+                <th className="px-4 py-3 font-medium" style={{ width: '18%' }}>Khách</th>
+                <th className="px-4 py-3 font-medium" style={{ width: '17%' }}>Trạng thái</th>
+                <th className="px-4 py-3 text-right font-medium" style={{ width: '15%' }}>Số tiền</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#e8eaed]">
               {bookings.map((b) => (
-                <tr key={b.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2.5">
-                    <Link
-                      href={`/bookings/${b.id}`}
-                      className="text-blue-600 hover:underline font-medium"
-                    >
+                <tr key={b.id} className="hover:bg-[#f8fafd]">
+                  <td className="px-4 py-3">
+                    <Link href={`/bookings/${b.id}`} className="font-medium text-[#1a73e8] hover:underline">
                       {b.booking_code}
                     </Link>
                   </td>
-                  <td className="px-3 py-2.5 truncate">{b.resource.name}</td>
-                  <td className="px-3 py-2.5 text-gray-600 text-xs">
-                    {formatDateRange(b.check_in, b.check_out)}
-                  </td>
-                  <td className="px-3 py-2.5 truncate">{b.customer_name}</td>
-                  <td className="px-3 py-2.5">
-                    <StatusBadge status={b.status} />
-                  </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">
-                    {formatVND(b.amount_due)}
-                  </td>
+                  <td className="truncate px-4 py-3 text-[#202124]">{b.resource.name}</td>
+                  <td className="px-4 py-3 text-xs text-[#5f6368]">{formatDateRange(b.check_in, b.check_out)}</td>
+                  <td className="truncate px-4 py-3 text-[#202124]">{b.customer_name}</td>
+                  <td className="px-4 py-3"><StatusBadge status={b.status} /></td>
+                  <td className="px-4 py-3 text-right tabular-nums text-[#202124]">{formatVND(b.amount_due)}</td>
                 </tr>
               ))}
             </tbody>

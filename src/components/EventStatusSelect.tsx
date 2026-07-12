@@ -38,7 +38,7 @@ export function EventStatusSelect({
       value={currentStatus}
       disabled={loading}
       onChange={(e) => handleChange(e.target.value)}
-      className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white disabled:opacity-50"
+      className="w-full border border-[#dadce0] bg-white px-2 py-1.5 text-xs text-[#202124] disabled:opacity-50"
     >
       {STATUS_OPTIONS.map((s) => (
         <option key={s} value={s}>
