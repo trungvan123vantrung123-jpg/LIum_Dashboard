@@ -1,7 +1,7 @@
 import { AlertCard } from '@/components/AlertCard'
 import { StatCard } from '@/components/StatCard'
 import { createServiceClient } from '@/lib/supabase-server'
-import type { BookingWithResource } from '@/types/database'
+import type { BookingWithResource, EventInquiry } from '@/types/database'
 import { Calendar, List, Users } from 'lucide-react'
 import Link from 'next/link'
 
@@ -29,15 +29,17 @@ async function getDashboardData() {
 
   const { data: pendingBookings } = await supabase
     .from('bookings')
-    .select('id')
+    .select('*, resource:resources(*)')
     .eq('status', 'payment_submitted')
+    .order('created_at', { ascending: false })
 
   const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
   const { data: newLeads } = await supabase
     .from('event_inquiries')
-    .select('id')
+    .select('*')
     .eq('status', 'new_lead')
     .gte('created_at', twoDaysAgo)
+    .order('created_at', { ascending: false })
 
   const { data: mismatchBookings } = await supabase
     .from('bookings')
@@ -66,6 +68,8 @@ async function getDashboardData() {
     totalRooms: totalRooms ?? 8,
     pendingCount: pendingBookings?.length ?? 0,
     newLeadsCount: newLeads?.length ?? 0,
+    pendingBookings: (pendingBookings ?? []) as BookingWithResource[],
+    newLeads: (newLeads ?? []) as EventInquiry[],
     mismatchBookings: (mismatchBookings ?? []) as BookingWithResource[],
     cancelRequestedBookings: (cancelRequestedBookings ?? []) as BookingWithResource[],
     expiringBookings: (expiringBookings ?? []) as BookingWithResource[],
@@ -83,6 +87,8 @@ export default async function DashboardPage() {
   })
 
   const totalUrgent =
+    data.pendingBookings.length +
+    data.newLeads.length +
     data.mismatchBookings.length +
     data.cancelRequestedBookings.length +
     data.expiringBookings.length
@@ -124,6 +130,15 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="divide-y divide-[#e8eaed]">
+            {data.pendingBookings.map((b) => (
+              <AlertCard
+                key={b.id}
+                tone="warning"
+                title={`${b.booking_code} — chờ xác nhận chuyển khoản`}
+                description={`${b.resource.name}, khách ${b.customer_name}, đã gửi ảnh CK — cần nhân viên xác nhận`}
+                href={`/bookings/${b.id}`}
+              />
+            ))}
             {data.mismatchBookings.map((b) => (
               <AlertCard
                 key={b.id}
@@ -144,6 +159,17 @@ export default async function DashboardPage() {
                   b.amount_paid ?? 0
                 )}`}
                 href={`/bookings/${b.id}`}
+              />
+            ))}
+            {data.newLeads.map((lead) => (
+              <AlertCard
+                key={lead.id}
+                tone="muted"
+                title={`${lead.inquiry_code} — lead sự kiện mới`}
+                description={`${lead.customer_name} · ${lead.event_type}${
+                  lead.guest_count ? ` · ${lead.guest_count} khách` : ''
+                } — cần liên hệ trong 48h`}
+                href="/events"
               />
             ))}
             {data.expiringBookings.map((b) => (
