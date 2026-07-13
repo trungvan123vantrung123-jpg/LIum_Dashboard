@@ -98,7 +98,7 @@ export default async function DashboardPage() {
       <header className="mb-6 flex flex-col gap-1 border-b border-[#dadce0] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="page-title">Tổng quan vận hành</h1>
-          <p className="page-description mt-1">Đồi Llum — cập nhật theo thời gian thực từ Supabase.</p>
+
         </div>
         <span className="text-sm capitalize text-[#5f6368]">{todayLabel}</span>
       </header>
