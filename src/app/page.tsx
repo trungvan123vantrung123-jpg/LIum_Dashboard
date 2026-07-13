@@ -30,7 +30,7 @@ async function getDashboardData() {
   const { data: pendingBookings } = await supabase
     .from('bookings')
     .select('id')
-    .eq('status', 'pending_hold')
+    .eq('status', 'payment_submitted')
 
   const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
   const { data: newLeads } = await supabase

@@ -4,12 +4,16 @@ import { createServiceClient } from '@/lib/supabase-server'
 // API route: huỷ booking. Có 2 nhánh khác nhau tuỳ trạng thái hiện tại,
 // đúng theo 2 case đã phân tích trong thiết kế nghiệp vụ:
 //
-// - Nếu đang 'pending_hold' (chưa xác nhận, chưa có tiền) -> huỷ thẳng
-//   luôn thành 'cancelled', không cần qua bước duyệt hoàn tiền.
-// - Nếu đang 'confirmed' (đã có tiền) -> KHÔNG huỷ thẳng. Chuyển sang
-//   'cancel_requested' để chờ nhân viên khác (hoặc quản lý) duyệt hoàn
-//   tiền riêng qua API approve-refund. Đây là chỗ tách quyền: người xem
-//   yêu cầu huỷ không tự động là người quyết định hoàn bao nhiêu %.
+// - Nếu đang 'pending_hold' hoặc 'payment_submitted' (chưa được nhân viên
+//   xác nhận cuối cùng) -> huỷ thẳng luôn thành 'cancelled', không cần
+//   qua bước duyệt hoàn tiền (vì nhân viên chưa từng xác nhận booking
+//   này là thật, kể cả khi khách đã lỡ chuyển khoản — trường hợp đó xử
+//   lý hoàn tiền tay ngoài hệ thống, không thuộc phạm vi 'refunded').
+// - Nếu đang 'confirmed' (nhân viên đã xác nhận, coi như giao dịch chính
+//   thức) -> KHÔNG huỷ thẳng. Chuyển sang 'cancel_requested' để chờ
+//   nhân viên khác (hoặc quản lý) duyệt hoàn tiền riêng qua API
+//   approve-refund. Đây là chỗ tách quyền: người xem yêu cầu huỷ không
+//   tự động là người quyết định hoàn bao nhiêu %.
 export async function POST(req: NextRequest) {
   const { bookingId, reason } = await req.json()
 
@@ -29,12 +33,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Không tìm thấy booking' }, { status: 404 })
   }
 
-  if (booking.status === 'pending_hold') {
+  if (booking.status === 'pending_hold' || booking.status === 'payment_submitted') {
     const { data: updated, error: updateError } = await supabase
       .from('bookings')
       .update({ status: 'cancelled', cancel_reason: reason ?? null })
       .eq('id', bookingId)
-      .eq('status', 'pending_hold')
+      .in('status', ['pending_hold', 'payment_submitted'])
       .select()
       .single()
 

@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic'
 const FILTER_OPTIONS: { value: BookingStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Tất cả' },
   { value: 'pending_hold', label: BOOKING_STATUS_LABEL.pending_hold },
+  { value: 'payment_submitted', label: BOOKING_STATUS_LABEL.payment_submitted },
   { value: 'confirmed', label: BOOKING_STATUS_LABEL.confirmed },
   { value: 'payment_mismatch', label: BOOKING_STATUS_LABEL.payment_mismatch },
   { value: 'cancel_requested', label: BOOKING_STATUS_LABEL.cancel_requested },

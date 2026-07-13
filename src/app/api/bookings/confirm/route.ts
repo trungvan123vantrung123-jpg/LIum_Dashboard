@@ -6,6 +6,13 @@ import { createServiceClient } from '@/lib/supabase-server'
 // trước khi ghi đè, vì slot có thể đã bị cron tự động expire trong lúc
 // nhân viên đang xem xét — không bao giờ tự ý ghi đè 'confirmed' lên
 // một booking đã 'expired'.
+//
+// LƯU Ý QUAN TRỌNG: chỉ cho phép xác nhận từ 'payment_submitted' (khách
+// đã gửi ảnh CK) hoặc 'payment_mismatch' (NV xem lại thấy thực ra khớp).
+// KHÔNG còn cho phép xác nhận trực tiếp từ 'pending_hold' nữa — vì
+// 'pending_hold' giờ chỉ có nghĩa "chưa có gì để xác nhận" (khách chưa
+// gửi ảnh CK). Việc tách 2 trạng thái này giúp nhân viên phân biệt rõ
+// "đang chờ khách chuyển khoản" và "khách đã chuyển, đang chờ mình duyệt".
 export async function POST(req: NextRequest) {
   const { bookingId } = await req.json()
 
@@ -26,12 +33,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Không tìm thấy booking' }, { status: 404 })
   }
 
-  // Bước 2: chỉ cho phép xác nhận khi đang pending_hold hoặc payment_mismatch
-  // (payment_mismatch: nhân viên xem lại thấy thực ra khớp, chốt xác nhận luôn)
-  if (booking.status !== 'pending_hold' && booking.status !== 'payment_mismatch') {
+  // Bước 2: chỉ cho phép xác nhận khi đang payment_submitted hoặc payment_mismatch
+  if (booking.status !== 'payment_submitted' && booking.status !== 'payment_mismatch') {
     return NextResponse.json(
       {
-        error: `Booking hiện đang ở trạng thái "${booking.status}", không thể xác nhận. Có thể đã hết hạn giữ chỗ hoặc đã được xử lý trước đó.`,
+        error: `Booking hiện đang ở trạng thái "${booking.status}", không thể xác nhận. Có thể chưa có ảnh chuyển khoản, đã hết hạn giữ chỗ, hoặc đã được xử lý trước đó.`,
         currentStatus: booking.status,
       },
       { status: 409 }
@@ -44,7 +50,7 @@ export async function POST(req: NextRequest) {
     .from('bookings')
     .update({ status: 'confirmed' })
     .eq('id', bookingId)
-    .in('status', ['pending_hold', 'payment_mismatch'])
+    .in('status', ['payment_submitted', 'payment_mismatch'])
     .select()
     .single()
 

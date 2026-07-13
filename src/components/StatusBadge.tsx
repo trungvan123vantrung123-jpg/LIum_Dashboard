@@ -2,6 +2,7 @@ import { BOOKING_STATUS_LABEL, type BookingStatus } from '@/types/database'
 
 const STATUS_STYLE: Record<BookingStatus, string> = {
   pending_hold: 'border-[#fbbc04] bg-[#fff8e1] text-[#8a5a00]',
+  payment_submitted: 'border-[#a142f4] bg-[#f3e8fd] text-[#681da8]',
   confirmed: 'border-[#34a853] bg-[#e6f4ea] text-[#137333]',
   payment_mismatch: 'border-[#ea4335] bg-[#fce8e6] text-[#c5221f]',
   cancel_requested: 'border-[#f29900] bg-[#fff4e5] text-[#b06000]',

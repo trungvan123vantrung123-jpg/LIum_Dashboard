@@ -21,6 +21,7 @@ export interface Resource {
 
 export type BookingStatus =
   | 'pending_hold'
+  | 'payment_submitted'
   | 'confirmed'
   | 'expired'
   | 'cancelled'
@@ -112,6 +113,7 @@ export interface EventInquiry {
 // Nhãn tiếng Việt cho từng trạng thái — dùng chung cho toàn bộ UI để nhất quán
 export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
   pending_hold: 'Đang giữ chỗ',
+  payment_submitted: 'Đã gửi CK, chờ xác nhận',
   confirmed: 'Đã xác nhận',
   expired: 'Hết hạn',
   cancelled: 'Đã huỷ',
@@ -123,6 +125,7 @@ export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
 // Màu tương ứng từng trạng thái — dùng class Tailwind, đồng bộ toàn bộ UI
 export const BOOKING_STATUS_COLOR: Record<BookingStatus, string> = {
   pending_hold: 'bg-amber-100 text-amber-800 border-amber-200',
+  payment_submitted: 'bg-purple-100 text-purple-800 border-purple-200',
   confirmed: 'bg-green-100 text-green-800 border-green-200',
   expired: 'bg-gray-100 text-gray-600 border-gray-200',
   cancelled: 'bg-gray-200 text-gray-700 border-gray-300',

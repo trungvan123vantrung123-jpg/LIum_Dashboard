@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-const LIVE_STATUSES = ['pending_hold', 'confirmed', 'payment_mismatch', 'cancel_requested']
+const LIVE_STATUSES = ['pending_hold', 'payment_submitted', 'confirmed', 'payment_mismatch', 'cancel_requested']
 
 async function getCalendarData(year: number, month: number) {
   const supabase = createServiceClient()
@@ -87,6 +87,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         <div className="mt-4 flex flex-wrap gap-4 text-xs text-[#5f6368]">
           <Legend color={BOOKING_STATUS_COLOR.confirmed} label="Đã xác nhận" />
           <Legend color={BOOKING_STATUS_COLOR.pending_hold} label="Đang giữ chỗ" />
+          <Legend color={BOOKING_STATUS_COLOR.payment_submitted} label="Chờ xác nhận CK" />
           <Legend color={BOOKING_STATUS_COLOR.payment_mismatch} label="Lệch tiền" />
           <Legend color={BOOKING_STATUS_COLOR.cancel_requested} label="Chờ duyệt huỷ" />
         </div>

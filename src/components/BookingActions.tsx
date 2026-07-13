@@ -52,7 +52,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
         </div>
       )}
 
-      {(booking.status === 'pending_hold' || booking.status === 'payment_mismatch') && (
+      {(booking.status === 'payment_submitted' || booking.status === 'payment_mismatch') && (
         <button
           disabled={loading}
           onClick={() => callApi('/api/bookings/confirm', { bookingId: booking.id })}
