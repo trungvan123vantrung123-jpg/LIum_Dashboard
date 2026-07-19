@@ -41,16 +41,18 @@ sang 'confirmed' → tự chạy tiếp: nhắn khách qua Messenger/Zalo
 1. Vào Supabase Dashboard → chọn project → **Database** → **Webhooks** (menu bên trái).
 2. Bấm **Create a new hook**.
 3. Điền:
-   - **Name**: `booking_status_changed` (đặt tên dễ nhớ)
+   - **Name**: `booking_changed` (đặt tên dễ nhớ)
    - **Table**: `bookings`
-   - **Events**: chỉ tick **Update** (không cần Insert/Delete cho mục đích này)
+   - **Events**: tick **Insert** và **Update**. Insert giúp n8n biết booking do
+     nhân viên tạo; Update dùng cho chỉnh lịch và chuyển trạng thái. Không
+     tick Delete vì hệ thống không xoá cứng booking.
    - **Type**: HTTP Request
    - **URL**: dán URL webhook n8n đã copy ở Bước 1
    - **HTTP Headers**: có thể thêm 1 header bí mật để n8n xác thực request
      thật sự đến từ Supabase, ví dụ `X-Webhook-Secret: <chuỗi bí mật tự đặt>`
 4. Bấm **Confirm**.
-5. Lặp lại y hệt cho bảng `event_inquiries` (đặt tên `event_status_changed`,
-   dùng cùng URL webhook n8n hoặc URL khác nếu muốn tách workflow riêng).
+5. Lặp lại cho bảng `event_inquiries` (đặt tên `event_status_changed`,
+   chỉ cần Update; dùng cùng URL hoặc URL khác nếu muốn tách workflow).
 
 ## Bước 3 — Hiểu đúng payload Supabase gửi sang n8n
 
@@ -84,24 +86,28 @@ không đổi), n8n cần tự lọc đúng case cần xử lý.
 
 ## Bước 4 — Logic xử lý trong n8n (gợi ý, cần bạn tự dựng)
 
-Trong workflow n8n vừa tạo, sau node Webhook, thêm:
+1. **Switch theo `type`**:
+   - `INSERT`: nếu `record.customer_platform === 'staff'`, đây là booking
+     do nhân viên tạo. Chỉ nhắn khách khi có `customer_psid` và chính sách
+     nghiệp vụ yêu cầu; nếu không thì dừng sau khi ghi nhận.
+   - `UPDATE`: so sánh `record.status` với `old_record.status`. Nếu status
+     không đổi, chỉ xử lý tiếp khi phòng/ngày/giá là nhóm field bạn đã chốt
+     cần thông báo cho khách.
 
-1. **IF node**: kiểm tra `{{$json.body.record.status}}` khác `{{$json.body.old_record.status}}`
-   — nếu bằng nhau (status không đổi), dừng workflow, không làm gì thêm.
+2. **Chống vòng lặp BOT ↔ webhook**: khi thay đổi do workflow bot vừa tạo,
+   n8n phải nhận diện bằng `customer_platform`, `idempotency_key` hoặc actor
+   metadata (khi schema bổ sung) và không phát lại một hành động ghi tương
+   tự. Lưu `record.id + record.updated_at + type` làm idempotency key của
+   execution để retry webhook không gửi trùng tin.
 
-2. **Switch node**: rẽ nhánh theo `{{$json.body.record.status}}`:
-   - `confirmed` → gửi tin nhắn xác nhận cho khách (dùng `customer_psid`,
-     `customer_platform` trong record để biết gửi Messenger hay Zalo)
-   - `refunded` → gửi tin nhắn báo đã hoàn tiền, kèm `refund_amount`
-   - `cancelled` → gửi tin nhắn báo đã huỷ (chỉ nếu `old_record.status`
-     là `payment_mismatch`, vì case huỷ từ `pending_hold` do khách tự huỷ
-     thì có thể không cần bot nhắn lại)
-   - `cancel_requested` → có thể không cần nhắn khách ngay, chỉ để nhân
-     viên xử lý tiếp trên web
+3. Với `UPDATE` status, rẽ nhánh theo `record.status`:
+   - `confirmed` → gửi tin nhắn xác nhận cho khách.
+   - `refunded` → báo đã hoàn tiền, kèm `refund_amount`.
+   - `cancelled` → báo huỷ theo chính sách đã chốt.
+   - `cancel_requested` → thường chỉ cảnh báo nội bộ, chưa báo hoàn tiền.
 
-3. Với mỗi nhánh, dùng đúng node gửi tin nhắn (Messenger Send API / Zalo OA
-   API) đã có sẵn trong workflow WF1 cũ — tái sử dụng lại phần "trả lời
-   khách" ở đó, không cần viết lại từ đầu.
+4. Với mỗi nhánh, tái sử dụng node gửi Messenger/Zalo trong WF1; luôn kiểm
+   tra `customer_psid` và `customer_platform` trước khi gửi.
 
 ## Bước 5 — Test thử
 

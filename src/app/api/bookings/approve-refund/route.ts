@@ -1,63 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { apiFailure, apiSuccess, ApiError, getRequestId, readJsonObject, requireFiniteNumber, requireUuid } from '@/lib/api'
+import { requireSameOrigin } from '@/lib/security'
 import { createServiceClient } from '@/lib/supabase-server'
 
-// API route: nhân viên duyệt hoàn tiền cho booking đang ở trạng thái
-// 'cancel_requested'. Nhân viên nhập refundPercent (theo chính sách 7
-// ngày/3 ngày), hệ thống tự tính refund_amount = amount_paid * percent/100.
-export async function POST(req: NextRequest) {
-  const { bookingId, refundPercent } = await req.json()
+export async function POST(request: Request) {
+  const requestId = getRequestId(request)
+  try {
+    requireSameOrigin(request)
+    const body = await readJsonObject(request)
+    const bookingId = requireUuid(body.bookingId, 'bookingId')
+    const refundPercent = requireFiniteNumber(body.refundPercent, 'refundPercent', 0, 100)
+    if (!Number.isInteger(refundPercent)) throw new ApiError(400, 'refundPercent phải là số nguyên', 'INVALID_REFUND_PERCENT')
+    const supabase = createServiceClient()
 
-  if (!bookingId || refundPercent === undefined) {
-    return NextResponse.json({ error: 'Thiếu bookingId hoặc refundPercent' }, { status: 400 })
+    const { data: booking } = await supabase.from('bookings').select('status, amount_paid').eq('id', bookingId).maybeSingle()
+    if (!booking) throw new ApiError(404, 'Không tìm thấy booking', 'BOOKING_NOT_FOUND')
+    if (booking.status !== 'cancel_requested') throw new ApiError(409, 'Booking không ở trạng thái chờ duyệt huỷ', 'INVALID_TRANSITION')
+    const refundAmount = Math.round(((booking.amount_paid ?? 0) * refundPercent) / 100)
+
+    const { data, error } = await supabase.from('bookings')
+      .update({ status: 'refunded', refund_percent: refundPercent, refund_amount: refundAmount })
+      .eq('id', bookingId).eq('status', 'cancel_requested')
+      .select('id, booking_code, status, refund_percent, refund_amount, updated_at').maybeSingle()
+    if (error) throw error
+    if (!data) throw new ApiError(409, 'Booking vừa được người khác xử lý', 'STALE_BOOKING')
+    return apiSuccess(requestId, { booking: data })
+  } catch (error) {
+    return apiFailure(error, requestId)
   }
-
-  if (refundPercent < 0 || refundPercent > 100) {
-    return NextResponse.json({ error: 'refundPercent phải trong khoảng 0-100' }, { status: 400 })
-  }
-
-  const supabase = createServiceClient()
-
-  const { data: booking, error: fetchError } = await supabase
-    .from('bookings')
-    .select('*')
-    .eq('id', bookingId)
-    .single()
-
-  if (fetchError || !booking) {
-    return NextResponse.json({ error: 'Không tìm thấy booking' }, { status: 404 })
-  }
-
-  if (booking.status !== 'cancel_requested') {
-    return NextResponse.json(
-      {
-        error: `Booking đang ở trạng thái "${booking.status}", không phải đang chờ duyệt huỷ.`,
-        currentStatus: booking.status,
-      },
-      { status: 409 }
-    )
-  }
-
-  const amountPaid = booking.amount_paid ?? 0
-  const refundAmount = Math.round((amountPaid * refundPercent) / 100)
-
-  const { data: updated, error: updateError } = await supabase
-    .from('bookings')
-    .update({
-      status: 'refunded',
-      refund_percent: refundPercent,
-      refund_amount: refundAmount,
-    })
-    .eq('id', bookingId)
-    .eq('status', 'cancel_requested')
-    .select()
-    .single()
-
-  if (updateError || !updated) {
-    return NextResponse.json(
-      { error: 'Có người khác vừa xử lý booking này, vui lòng tải lại trang' },
-      { status: 409 }
-    )
-  }
-
-  return NextResponse.json({ success: true, booking: updated })
 }

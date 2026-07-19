@@ -31,7 +31,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error ?? 'Có lỗi xảy ra')
+        const message = typeof data.error === 'string' ? data.error : data.error?.message
+        setError(message ?? 'Có lỗi xảy ra')
         setLoading(false)
         return
       }

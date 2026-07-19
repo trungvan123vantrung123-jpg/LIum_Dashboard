@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Đồi Llum Admin
 
-## Getting Started
+Workspace vận hành booking chung cho chatbot và nhân viên. Supabase là nguồn dữ liệu duy nhất; n8n/chatbot và web admin cùng đọc/ghi vào hệ thống qua các luồng được kiểm soát.
 
-First, run the development server:
+## Chức năng
+
+- Dashboard các booking cần xử lý.
+- Calendar phòng theo tháng; bấm ô trống để tạo booking.
+- Nhân viên tạo booking cho khách gọi điện/walk-in.
+- Chỉnh sửa phòng, ngày, khách, số người, phụ phí và ghi chú.
+- Phát hiện trùng lịch bằng constraint Postgres.
+- Chống ghi đè khi bot/người khác vừa cập nhật booking.
+- Realtime refresh khi booking thay đổi.
+- Luồng riêng cho xác nhận thanh toán, huỷ và hoàn tiền.
+
+## Chạy local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sao chép `.env.local.example` thành `.env.local` và điền ba biến Supabase trước khi chạy.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Kiểm tra
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+> **Quan trọng:** API ghi dữ liệu dùng service role phía server. Dự án hiện chưa có đăng nhập theo quyết định giai đoạn đầu; cần bổ sung Supabase Auth trước khi công khai URL quản trị.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Xem [docs/HANDOFF.md](docs/HANDOFF.md) để biết state machine, quy tắc race condition và kết nối n8n.

@@ -69,7 +69,41 @@ textarea {
   border-radius: 8px;
 }
 
+.form-section {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 22px;
+  box-shadow: 0 10px 30px rgba(60, 64, 67, 0.06);
+}
+
+.form-heading {
+  color: var(--foreground);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.form-hint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 19px;
+}
+
 .table-scroll {
   overflow-x: auto;
   scrollbar-width: thin;
+}
+
+@media (max-width: 640px) {
+  .app-container {
+    width: min(100% - 28px, 1120px);
+  }
+
+  .form-section {
+    padding: 17px;
+    border-radius: 13px;
+  }
 }

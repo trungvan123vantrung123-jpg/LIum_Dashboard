@@ -52,7 +52,7 @@ export default async function EventsPage() {
                       {item.guest_count} khách{item.proposed_start && ` — ${formatDate(item.proposed_start)}`}
                     </div>
                   )}
-                  <EventStatusSelect inquiryId={item.id} currentStatus={item.status} />
+                  <EventStatusSelect inquiryId={item.id} currentStatus={item.status} updatedAt={item.updated_at} />
                 </article>
               ))}
             </div>

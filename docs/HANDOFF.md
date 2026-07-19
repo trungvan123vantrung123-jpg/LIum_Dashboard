@@ -152,14 +152,27 @@ subscription (Client Component riêng) để tự động refresh khi có UPDATE
 xem code mẫu comment trong `src/lib/supabase-client.ts` (client này đã
 sẵn sàng cho việc này, chỉ chưa có component nào dùng subscribe).
 
-### 3.4 Trang tạo booking thủ công (walk-in / khách gọi điện)
-Hiện tại KHÔNG có form nào để nhân viên tự tạo booking mới trực tiếp trên
-web (ví dụ khách gọi điện đặt phòng, không qua chatbot). Mọi booking hiện
-chỉ được tạo qua n8n (bot gọi `room_holding1`). Nếu cần, phải thêm 1 trang
-form mới + 1 API route `POST /api/bookings/create-manual` — LƯU Ý route
-này PHẢI tự chạy đúng logic check trùng trước khi insert (gọi
-`check_room_available1` tương đương ở phía server, hoặc để Postgres
-constraint tự chặn và bắt lỗi 23P01 để báo nhân viên biết trùng lịch).
+### 3.4 Booking thủ công và cập nhật hai chiều — ĐÃ BỔ SUNG
+
+Nhân viên có thể tạo booking từ `/bookings/new`, nút “Tạo booking” ở danh
+sách hoặc bấm ô trống trên lịch để điền sẵn phòng/ngày. Booking nhân viên
+tạo dùng `customer_platform = 'staff'`, bắt đầu ở `pending_hold` và tuyệt
+đối không tự xác nhận thanh toán.
+
+Trang chi tiết có nút “Chỉnh sửa” cho thông tin vận hành: phòng, ngày,
+khách, số người, phụ phí và ghi chú. API `PATCH /api/bookings/[id]` dùng
+`updated_at` làm optimistic concurrency token; nếu bot hoặc nhân viên khác
+đã sửa trước thì trả `409`, không ghi đè âm thầm. Các field status, thanh
+toán, huỷ và hoàn tiền không nằm trong DTO chỉnh sửa chung.
+
+Insert/update ngày/phòng dựa thêm vào EXCLUDE constraint Postgres hiện có;
+lỗi overlap `23P01` được chuyển thành thông báo trùng lịch thân thiện.
+Supabase Realtime được subscribe ở root layout để thay đổi từ bot/người
+tự refresh các Server Component.
+
+> Bảo mật: web vẫn chưa có đăng nhập theo quyết định giai đoạn trước. Vì
+> API dùng service role, cần bổ sung Supabase Auth trước khi phát hành URL
+> CRUD rộng rãi ra Internet.
 
 ### 3.5 Đặt bàn nhà hàng — hiện KHÔNG quản lý trên web
 Theo quyết định nghiệp vụ đã chốt, đặt bàn nhà hàng xử lý HOÀN TOÀN THỦ

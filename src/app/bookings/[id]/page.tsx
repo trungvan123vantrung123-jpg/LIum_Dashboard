@@ -42,7 +42,10 @@ export default async function BookingDetailPage({
             <h1 className="page-title">{booking.booking_code}</h1>
             <p className="page-description mt-1">{booking.resource.name} · {booking.customer_name}</p>
           </div>
-          <StatusBadge status={booking.status} />
+          <div className="flex items-center gap-3">
+            <Link id="edit-booking-button" href={`/bookings/${booking.id}/edit`} className="rounded-lg border border-[#dadce0] bg-white px-3 py-2 text-sm font-medium text-[#3c4043] transition hover:bg-[#f8fafd]">Chỉnh sửa</Link>
+            <StatusBadge status={booking.status} />
+          </div>
         </header>
 
         <section className="px-5 py-5">

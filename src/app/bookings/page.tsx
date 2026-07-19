@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/components/StatusBadge'
 import { createServiceClient } from '@/lib/supabase-server'
-import { BOOKING_STATUS_LABEL, type BookingStatus, type BookingWithResource } from '@/types/database'
+import { BOOKING_STATUS_LABEL, type BookingStatus } from '@/types/database'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -17,17 +17,31 @@ const FILTER_OPTIONS: { value: BookingStatus | 'all'; label: string }[] = [
   { value: 'refunded', label: BOOKING_STATUS_LABEL.refunded },
 ]
 
+type BookingListItem = {
+  id: string
+  booking_code: string
+  resource_id: string
+  booking_type: 'stay'
+  check_in: string | null
+  check_out: string | null
+  status: BookingStatus
+  customer_name: string
+  amount_due: number
+  resource: { id: string; name: string }
+}
+
 async function getBookings(statusFilter?: string) {
   const supabase = createServiceClient()
+  const allowedStatus = FILTER_OPTIONS.some((option) => option.value === statusFilter) ? statusFilter : 'all'
   let query = supabase
     .from('bookings')
-    .select('*, resource:resources(*)')
+    .select('id, booking_code, resource_id, booking_type, check_in, check_out, status, customer_name, amount_due, resource:resources(id, name)')
     .eq('booking_type', 'stay')
     .order('created_at', { ascending: false })
     .limit(100)
 
-  if (statusFilter && statusFilter !== 'all') {
-    query = query.eq('status', statusFilter)
+  if (allowedStatus && allowedStatus !== 'all') {
+    query = query.eq('status', allowedStatus)
   }
 
   const { data, error } = await query
@@ -35,7 +49,7 @@ async function getBookings(statusFilter?: string) {
     console.error(error)
     return []
   }
-  return data as BookingWithResource[]
+  return data as unknown as BookingListItem[]
 }
 
 export default async function BookingsPage({
@@ -44,14 +58,20 @@ export default async function BookingsPage({
   searchParams: Promise<{ status?: string }>
 }) {
   const { status } = await searchParams
-  const currentFilter = status ?? 'all'
+  const requestedStatus = status ?? 'all'
+  const currentFilter = FILTER_OPTIONS.some((option) => option.value === requestedStatus) ? requestedStatus : 'all'
   const bookings = await getBookings(currentFilter)
 
   return (
     <div className="app-container py-6">
-      <header className="mb-5 border-b border-[#dadce0] pb-5">
-        <h1 className="page-title">Danh sách booking</h1>
-        <p className="page-description mt-1">100 booking lưu trú mới nhất, lọc theo trạng thái xử lý.</p>
+      <header className="mb-5 flex flex-col gap-4 border-b border-[#dadce0] pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="page-title">Danh sách booking</h1>
+          <p className="page-description mt-1">100 booking lưu trú mới nhất, lọc theo trạng thái xử lý.</p>
+        </div>
+        <Link id="create-booking-button" href="/bookings/new" className="inline-flex items-center justify-center rounded-lg bg-[#1a73e8] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1765cc]">
+          + Tạo booking
+        </Link>
       </header>
 
       <div className="mb-4 flex flex-wrap gap-1 border-b border-[#dadce0]">

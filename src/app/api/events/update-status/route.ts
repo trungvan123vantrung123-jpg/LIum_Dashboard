@@ -1,45 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { apiFailure, apiSuccess, ApiError, getRequestId, optionalText, readJsonObject, requireUuid } from '@/lib/api'
+import { requireSameOrigin } from '@/lib/security'
 import { createServiceClient } from '@/lib/supabase-server'
 import type { EventInquiryStatus } from '@/types/database'
 
-// API route: cập nhật trạng thái lead sự kiện. Đơn giản hơn nhiều so với
-// booking vì event_inquiries KHÔNG có constraint chống trùng — đây là
-// bảng vận hành thủ công thuần tuý, không cần kiểm tra race condition.
-const VALID_STATUSES: EventInquiryStatus[] = [
-  'new_lead',
-  'contacted',
-  'quoted',
-  'confirmed',
-  'lost',
-]
+const VALID_STATUSES: EventInquiryStatus[] = ['new_lead', 'contacted', 'quoted', 'confirmed', 'lost']
 
-export async function POST(req: NextRequest) {
-  const { inquiryId, status, assignedStaff, notes } = await req.json()
-
-  if (!inquiryId || !status) {
-    return NextResponse.json({ error: 'Thiếu inquiryId hoặc status' }, { status: 400 })
+export async function POST(request: Request) {
+  const requestId = getRequestId(request)
+  try {
+    requireSameOrigin(request)
+    const body = await readJsonObject(request)
+    const inquiryId = requireUuid(body.inquiryId, 'inquiryId')
+    const status = body.status
+    if (typeof status !== 'string' || !VALID_STATUSES.includes(status as EventInquiryStatus)) {
+      throw new ApiError(400, 'Trạng thái không hợp lệ', 'INVALID_STATUS')
+    }
+    const expectedUpdatedAt = typeof body.expectedUpdatedAt === 'string' ? body.expectedUpdatedAt : ''
+    if (!expectedUpdatedAt) throw new ApiError(400, 'Thiếu phiên bản lead', 'MISSING_VERSION')
+    const assignedStaff = optionalText(body.assignedStaff, 'Nhân viên phụ trách', 120)
+    const notes = optionalText(body.notes, 'Ghi chú', 2000)
+    const supabase = createServiceClient()
+    const { data, error } = await supabase.from('event_inquiries')
+      .update({ status, ...(body.assignedStaff !== undefined ? { assigned_staff: assignedStaff } : {}), ...(body.notes !== undefined ? { notes } : {}) })
+      .eq('id', inquiryId).eq('updated_at', expectedUpdatedAt)
+      .select('id, status, updated_at').maybeSingle()
+    if (error) throw error
+    if (!data) throw new ApiError(409, 'Lead vừa được nhân viên khác cập nhật', 'STALE_INQUIRY')
+    return apiSuccess(requestId, { inquiry: data })
+  } catch (error) {
+    return apiFailure(error, requestId)
   }
-
-  if (!VALID_STATUSES.includes(status)) {
-    return NextResponse.json({ error: 'Trạng thái không hợp lệ' }, { status: 400 })
-  }
-
-  const supabase = createServiceClient()
-
-  const updatePayload: Record<string, unknown> = { status }
-  if (assignedStaff !== undefined) updatePayload.assigned_staff = assignedStaff
-  if (notes !== undefined) updatePayload.notes = notes
-
-  const { data: updated, error } = await supabase
-    .from('event_inquiries')
-    .update(updatePayload)
-    .eq('id', inquiryId)
-    .select()
-    .single()
-
-  if (error || !updated) {
-    return NextResponse.json({ error: 'Không cập nhật được lead' }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true, inquiry: updated })
 }

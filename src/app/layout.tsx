@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NavBar } from "@/components/NavBar";
+import { RealtimeRefresh } from "@/components/RealtimeRefresh";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,6 +30,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#f8fafd] text-[#202124]">
+        <RealtimeRefresh />
         <NavBar />
         <main className="flex-1 pb-10">{children}</main>
       </body>
